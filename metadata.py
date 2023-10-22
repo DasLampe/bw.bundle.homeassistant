@@ -3,6 +3,12 @@ defaults = {
         'user': 'homeassistant',
         'group': 'homeassistant',
         'version': '2023.10.3',
+        'configs': {
+            'automation': {},
+            'script': {},
+            'scene': {},
+            'homeassistant': {},
+        },
     },
     'apt': {
         'packages': {
@@ -37,7 +43,11 @@ def add_homeassitant_user(metadata):
     return {
         'users': {
             metadata.get('homeassistant/user'): {
-                'add_groups': ['gpio', 'i2c'],
+                'add_groups': [
+                    'gpio',
+                    'i2c',
+                    'bluetooth'
+                ],
                 'shell': '/bin/nologin',
             },
         },
