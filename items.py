@@ -1,4 +1,5 @@
 global node
+import yaml
 
 cfg = node.metadata.get('homeassistant')
 user = cfg.get('user')
@@ -11,7 +12,7 @@ svc_systemd = {
         'needs': [
             f'file:/etc/systemd/system/homeassistant.service',
             'pkg_pip:',
-            f'directory:/home/{user}/.homeassistant',
+            f'file:/home/{user}/.homeassistant/configuration.yaml',
         ],
     }
 }
@@ -22,8 +23,39 @@ files = {
         'content_type': 'jinja2',
         'owner': 'root',
         'group': 'root',
+    },
+    f'/home/{user}/.homeassistant/configuration.yaml': {
+        'source': 'home/homeassistant/.homeassistant/configuration.yaml.j2',
+        'content_type': 'jinja2',
+        'context': {
+            'configs': cfg.get('configs', {}),
+        },
+        'owner': user,
+        'group': group,
+        'mode': '0644',
+        'needs': [
+            f'directory:/home/{user}/.homeassistant',
+        ],
+        'triggers': [
+            'svc_systemd:homeassistant.service:restart',
+        ],
     }
 }
+
+# Create config files
+for name, conf in cfg.get('configs', {}).items():
+    files[f'/home/{user}/.homeassistant/configs/{name}.yaml'] = {
+        'content': yaml.dump(conf),
+        'owner': user,
+        'group': group,
+        'mode': '0644',
+        'needs': [
+            f'directory:/home/{user}/.homeassistant/configs',
+        ],
+        'triggers': [
+            'svc_systemd:homeassistant.service:restart',
+        ],
+    }
 
 directories = {
     '/srv/homeassistant': {
@@ -39,7 +71,14 @@ directories = {
         'needs': [
             f'user:{user}',
         ]
-    }
+    },
+    f'/home/{user}/.homeassistant/configs': {
+        'owner': user,
+        'group': group,
+        'needs': [
+            f'directory:/home/{user}/.homeassistant',
+        ],
+    },
 }
 
 actions = {
@@ -91,14 +130,4 @@ pkg_pip = {
             'action:install_venv_wheel',
         ]
     }
-    # '/srv/homeassistant/pyqrcode': {
-    #     'needs': [
-    #         'action:install_venv_wheel',
-    #     ],
-    # },
-    # '/srv/homeassistant/pyotp': {
-    #     'needs': [
-    #         'action:install_venv_wheel',
-    #     ],
-    # }
 }

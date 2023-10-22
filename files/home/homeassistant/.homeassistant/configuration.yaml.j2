@@ -1,0 +1,5 @@
+default_config:
+
+{% for name,conf in configs.items() %}
+{{ name }}: !include configs/{{ name }}.yaml
+{% endfor %}
