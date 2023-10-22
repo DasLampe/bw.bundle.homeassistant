@@ -3,12 +3,6 @@ defaults = {
         'user': 'homeassistant',
         'group': 'homeassistant',
         'version': '2023.10.3',
-        'configs': {
-            'automation': {},
-            'script': {},
-            'scene': {},
-            'homeassistant': {},
-        },
     },
     'apt': {
         'packages': {

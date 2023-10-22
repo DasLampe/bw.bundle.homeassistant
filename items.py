@@ -1,3 +1,6 @@
+import os
+import pathlib
+
 global node
 import yaml
 
@@ -12,7 +15,7 @@ svc_systemd = {
         'needs': [
             f'file:/etc/systemd/system/homeassistant.service',
             'pkg_pip:',
-            f'file:/home/{user}/.homeassistant/configuration.yaml',
+            'tag:homeassistant_configs',
         ],
     }
 }
@@ -24,38 +27,7 @@ files = {
         'owner': 'root',
         'group': 'root',
     },
-    f'/home/{user}/.homeassistant/configuration.yaml': {
-        'source': 'home/homeassistant/.homeassistant/configuration.yaml.j2',
-        'content_type': 'jinja2',
-        'context': {
-            'configs': cfg.get('configs', {}),
-        },
-        'owner': user,
-        'group': group,
-        'mode': '0644',
-        'needs': [
-            f'directory:/home/{user}/.homeassistant',
-        ],
-        'triggers': [
-            'svc_systemd:homeassistant.service:restart',
-        ],
-    }
 }
-
-# Create config files
-for name, conf in cfg.get('configs', {}).items():
-    files[f'/home/{user}/.homeassistant/configs/{name}.yaml'] = {
-        'content': yaml.dump(conf),
-        'owner': user,
-        'group': group,
-        'mode': '0644',
-        'needs': [
-            f'directory:/home/{user}/.homeassistant/configs',
-        ],
-        'triggers': [
-            'svc_systemd:homeassistant.service:restart',
-        ],
-    }
 
 directories = {
     '/srv/homeassistant': {
@@ -71,13 +43,6 @@ directories = {
         'needs': [
             f'user:{user}',
         ]
-    },
-    f'/home/{user}/.homeassistant/configs': {
-        'owner': user,
-        'group': group,
-        'needs': [
-            f'directory:/home/{user}/.homeassistant',
-        ],
     },
 }
 
@@ -131,3 +96,46 @@ pkg_pip = {
         ]
     }
 }
+
+# Gather files from /data/homeassistant/files/{node.name}/ and copy them to /home/{user}/.homeassistant recursively
+root_dir = os.path.join(node.repo.data_dir, 'homeassistant', 'files', node.name)
+for current_dir, subdirs, subfiles in os.walk( root_dir ):
+    relpath = os.path.relpath(current_dir, root_dir)
+
+    # Directories
+    for dirname in subdirs:
+        dir_path = os.path.join(relpath, dirname)
+        act_path = os.path.normpath(os.path.join('/home', user, '.homeassistant', dir_path))
+        need_dir = os.path.normpath(os.path.join('/home', user, '.homeassistant', relpath))
+
+        directories[act_path] = {
+            'owner': user,
+            'group': group,
+            'tags': [
+                'homeassistant_config_dirs',
+            ],
+            'needs': [
+                f'directory:{need_dir}',
+            ]
+        }
+
+    # Files
+    for filename in subfiles:
+        rel_filename = os.path.normpath(os.path.join(relpath, filename))
+        act_filename = os.path.normpath(os.path.join('/home', user, '.homeassistant', rel_filename))
+        need_dir = os.path.normpath(os.path.join('/home', user, '.homeassistant', relpath))
+
+        files[act_filename] = {
+            'source': os.path.normpath(os.path.join(node.name, rel_filename)),
+            'owner': user,
+            'group': group,
+            'needs': [
+                f'directory:{need_dir}',
+            ],
+            'triggers': [
+                'svc_systemd:homeassistant.service:restart',
+            ],
+            'tags': [
+                'homeassistant_configs'
+            ]
+        }
