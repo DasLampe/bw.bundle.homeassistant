@@ -2,7 +2,7 @@ defaults = {
     'homeassistant': {
         'user': 'homeassistant',
         'group': 'homeassistant',
-        'version': '2023.10.3',
+        'version': '2024.02.1',
     },
     'apt': {
         'packages': {
