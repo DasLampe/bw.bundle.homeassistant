@@ -99,7 +99,7 @@ pkg_pip = {
 
 # Gather files from /data/homeassistant/files/{node.name}/ and copy them to /home/{user}/.homeassistant recursively
 root_dir = os.path.join(node.repo.data_dir, 'homeassistant', 'files', node.name)
-for current_dir, subdirs, subfiles in os.walk( root_dir ):
+for current_dir, subdirs, subfiles in os.walk(root_dir):
     relpath = os.path.relpath(current_dir, root_dir)
 
     # Directories
@@ -127,6 +127,10 @@ for current_dir, subdirs, subfiles in os.walk( root_dir ):
 
         files[act_filename] = {
             'source': os.path.normpath(os.path.join(node.name, rel_filename)),
+            'content_type': 'jinja2',
+            'context': {
+                'cfg': cfg
+            },
             'owner': user,
             'group': group,
             'needs': [
